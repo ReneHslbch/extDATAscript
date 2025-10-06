@@ -1,5 +1,6 @@
 package script;
 
+import java.util.concurrent.*;
 import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebDriver;
@@ -11,9 +12,9 @@ import java.util.List;
 import java.util.Scanner;
 
 public class OpenWebsites {
+
   public static void handleCookies(WebDriver driver) {
     try {
-      // Suche Buttons mit typischen Texten
       List<WebElement> buttons = driver.findElements(By.xpath(
           "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'ablehnen') or " +
               "contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'reject') or " +
@@ -36,46 +37,84 @@ public class OpenWebsites {
   }
 
   public static void main(String[] args) throws InterruptedException {
-    // Chrome-Optionen
     ChromeOptions options = new ChromeOptions();
     options.addArguments("--disable-popup-blocking");
     options.addArguments("--no-sandbox");
 
-    // Extension im Entwicklermodus laden (entpackter Ordner)
-    options.addArguments(
-        "load-extension=C:/Studium/softwareprojekt/ubitrans-browserextension-HazelNEW/Frontend/build");
-
-    // WebDriver starten
     WebDriver driver = new ChromeDriver(options);
-
-    // Eingabeaufforderung
     Scanner scanner = new Scanner(System.in);
-    System.out.println("Tippe 'start', um die Webseiten zu öffnen, oder 'stop', um zu beenden:");
-    String input = scanner.nextLine();
 
-    if (!"start".equalsIgnoreCase(input)) {
-      System.out.println("Beendet.");
-      driver.quit();
-      return;
+    // Warten auf Start
+    System.out.println("Tippe 'start', um die Webseiten zu öffnen, oder 'quit', um zu beenden:");
+    while (true) {
+      String input = scanner.nextLine().trim().toLowerCase();
+      if (input.equals("start")) {
+        break;
+      } else if (input.equals("quit")) {
+        System.out.println("Programm beendet.");
+        driver.quit();
+        System.exit(0);
+      } else {
+        System.out.println("Ungültiger Befehl. Tippe 'start' oder 'quit':");
+      }
     }
 
-    // Nacheinander abarbeiten
-    for (String url : DomainLists.demirDElist) {
-      try {
+    int index = 0; // merken, bei welcher Domain wir sind
+    while (index < DomainLists.demirDElist.size()) {
+      String url = DomainLists.demirDElist.get(index);
+
         driver.get(url);
         System.out.println("Geöffnet: " + url);
         Thread.sleep(2000);
         handleCookies(driver);
-        Thread.sleep(30000);
 
+      boolean paused = true;
+      long startTime = System.currentTimeMillis();
+      while (paused) {
+        System.out.println("Tippe 'weiter' für nächste Seite, 'stop' zum Pausieren, 'quit' zum Beenden (automatisch nach 30s weiter):");
 
-      } catch (Exception e) {
-        System.out.println("Fehler bei " + url + ": " + e.getMessage());
+        String input = null;
+        long timeout = 30000; // 30 Sekunden
+        while ((System.currentTimeMillis() - startTime) < timeout && input == null) {
+          try {
+            if (System.in.available() > 0) {  // prüft, ob etwas eingegeben wurde
+              input = scanner.nextLine().trim().toLowerCase();
+            } else {
+              Thread.sleep(200); // kurz warten, um CPU zu schonen
+            }
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        }
+
+        if (input == null) {
+          System.out.println("Keine Eingabe in 30 Sekunden. Automatisch weiter ✅");
+          paused = false;
+          index++;
+          break;
+        }
+
+        switch (input) {
+          case "weiter":
+            paused = false;
+            index++;
+            break;
+          case "stop":
+            System.out.println("Pausiert. Tippe 'weiter', um fortzufahren, oder 'quit', um zu beenden.");
+            startTime = System.currentTimeMillis(); // Pause beginnt neu
+            break;
+          case "quit":
+            System.out.println("Sofortiger Abbruch. Browser wird geschlossen.");
+            driver.quit();
+            System.exit(0);
+          default:
+            System.out.println("Ungültiger Befehl. Tippe 'weiter', 'stop' oder 'quit'.");
+        }
       }
+
+
     }
+    System.out.println("Alle Seiten geöffnet. Browser wird geschlossen.");
 
-
-    // Browser schließen
-    //driver.quit();
   }
 }

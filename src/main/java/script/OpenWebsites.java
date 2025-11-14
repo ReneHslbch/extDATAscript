@@ -40,6 +40,7 @@ public class OpenWebsites {
     ChromeOptions options = new ChromeOptions();
     options.addArguments("--disable-popup-blocking");
     options.addArguments("--no-sandbox");
+    options.addArguments("--disable-dns-prefetch");
 
     WebDriver driver = new ChromeDriver(options);
     Scanner scanner = new Scanner(System.in);
@@ -63,10 +64,16 @@ public class OpenWebsites {
     while (index < DomainLists.demirDElist.size()) {
       String url = DomainLists.demirDElist.get(index);
 
+      try {
         driver.get(url);
         System.out.println("Geöffnet: " + url);
         Thread.sleep(2000);
         handleCookies(driver);
+      } catch (Exception e) {
+        System.out.println("Fehler beim Öffnen von " + url + ": " + e.getMessage());
+        index++;
+        continue;
+      }
 
       boolean paused = true;
       long startTime = System.currentTimeMillis();
